@@ -1,0 +1,41 @@
+# WARNING!
+# Do NOT use this file in production - only for local-development!
+# Не используйте этот файл в продакшн - только для локальной разработки!
+
+services:
+
+  db:
+    container_name: eetgbot-db
+    image: library/postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - eetgbot-pgdata:/var/lib/postgresql/data
+    networks:
+      - eetgbot-network
+
+  app:
+    container_name: eetgbot-app
+    image: eetgbot
+    build:
+      context: ./
+    working_dir: /app
+    command: "python --version"
+    # restart: unless-stopped
+    volumes:
+      - ./:/app
+    networks:
+      - eetgbot-network
+
+networks:
+  eetgbot-network:
+    driver: bridge
+
+volumes:
+  eetgbot-pgdata:
+    driver: local
