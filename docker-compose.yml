@@ -25,7 +25,7 @@ services:
     build:
       context: ./
     working_dir: /app
-    command: "python --version"
+    command: "./start_bot.sh"
     # restart: unless-stopped
     volumes:
       - ./:/app

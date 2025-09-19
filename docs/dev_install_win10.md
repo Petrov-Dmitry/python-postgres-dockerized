@@ -5,127 +5,116 @@
 * [Git for Windows](https://git-scm.com/download/win) с установками по умолчанию. Лично я изменил только дефолтный редактор с VIM на Nano.
 * IDE - лично я использую [Visual Studio Code](https://code.visualstudio.com/download), но на вкус и цвет все фломастеры разные.
 * Терминал git-bash
+* Установленный на хост-машине Python версии 3.11 или выше
 
 ## Установка проекта
 
-* Устанавливаем virtualenv командой `pip install virtualenv`
-* "активируем" виртуальное окружение Python командой `virtualenv env && source env/Scripts/activate`
 * Настраиваем Git hooks командой `git config core.hooksPath .githooks`
-* Устанавливаем зависимости командой `pip install .`
+* Устанавливаем virtualenv командой `pip install virtualenv`
+* Aктивируем виртуальное окружение Python командой `virtualenv env && source env/Scripts/activate`
+* При необходимости установки пакетов Python пользуемся командой `pip install {package-name}`
 
 > **&#9888; Важно!**
+>
+> Не редактируйте файл `requirements.txt` вручную!
 >
 > Файл `requirements.txt` управляется автоматически через git-hooks:
 > * При выполнении коммита файл обновляется автоматически
 > * После успешного коммита зависимости устанавливаются автоматически
->
-> Не редактируйте файл `requirements.txt` вручную!
-
-* Запускаем телеграм-бота командой `py eetgbot.py`
-
-## Структура проекта
-```
-/                           # Корневая директория проекта с приложением
-├── core/                   # Ядро приложения
-│   ├── migrations/         # Миграции базы данных
-├── modules/                # Подключаемые модули
-├── assets/                 # Статические ресурсы
-├── docs/                   # Документация
-├── tests/                  # Тесты (если есть)
-├── .dockerignore           # Настройки докер-игнор для сборки проекта
-├── .env.example            # Пример настроек окружения
-├── .gitignore              # Список файлов исключаемых из репозитория
-├── docker-compose.yml      # Файл локальной сборки докер-контейнеров
-├── Dockerfile              # Файл сборки контейнера с приложением
-├── LICENSE                 # Файл лицензии
-├── README.md               # Общая информация о проекте
-└── requirements.txt        # Список зависимостей приложения
-```
 
 ## Работа с базой данных
 
 ### Система миграций
-Проект использует систему миграций для управления схемой базы данных. Миграции находятся в директории `core/migrations/` и автоматически применяются при запуске приложения.
+
+Проект использует систему миграций для управления схемой базы данных PostgreSQL. Файлы миграций сохраняются в директории `migrations` и автоматически применяются при запуске приложения.
 
 #### Управление миграциями
-Для управления миграциями используется скрипт `core/manage_migrations.py`.
 
-Доступные команды:
+Для управления миграциями используется скрипт `utils/migrations.py`.
+
+#### Доступные команды:
 
 1. Создание новой миграции:
 ```bash
-python -m core.manage_migrations create "описание миграции"
+python -m utils.migrations create "описание миграции"
 ```
 Например:
 ```bash
-python -m core.manage_migrations create "add user table"
+python -m utils.migrations create "add user table"
 ```
 
 2. Просмотр статуса миграций:
 ```bash
-python -m core.manage_migrations status
+python -m utils.migrations status
 ```
 
 3. Применение миграций:
 ```bash
 # Применить все ожидающие миграции
-python -m core.manage_migrations apply
+python -m utils.migrations apply
 
 # Применить миграции до определенной версии
-python -m core.manage_migrations apply --to 20240315143022
+python -m utils.migrations apply --to 5
 ```
 
 4. Откат миграций:
 ```bash
 # Откатить последнюю миграцию
-python -m core.manage_migrations rollback
+python -m utils.migrations rollback
 
 # Откатить до определенной версии
-python -m core.manage_migrations rollback --to 20240315000000
+python -m utils.migrations rollback --to 3
 ```
 
-Пример вывода статуса:
+#### Пример вывода статуса:
+
 ```
 Migration Status:
 --------------------------------------------------------------------------------
 Status     Version              Description
 --------------------------------------------------------------------------------
-✓          20240315000000      Initial
-✓          20240315143022      Add user table
-           20240315144501      Add email field to user
+✓          1          Initial schema
+✓          2          Add user table
+✓          3          Add posts table
+✓          4          Add categories table
+           5          Add email field to user
 --------------------------------------------------------------------------------
 ```
+
 Где:
 * ✓ - миграция применена
 * пустое место - миграция еще не применена
 
 #### Структура файла миграции
-При создании новой миграции автоматически генерируется файл со следующей структурой:
+
+При создании новой миграции в директории `migrations` автоматически генерируется шаблонный файл со следующей структурой:
 ```python
-from core.migrations import Migration
-from datetime import datetime
+-- Migration: {next_version:04d}_{snake_case_name}
+-- Created: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+-- Description: {description or 'No description provided'}
 
-up_sql = """
--- SQL для применения изменений
+-- UP migration
+/*
+Ваш SQL код для применения миграции
+Пример:
+CREATE TABLE example_table (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+*/
 
-"""
-
-down_sql = """
--- SQL для отката изменений
-
-"""
-
-migration = Migration(
-    version=int(datetime.strptime('20240315143022', '%Y%m%d%H%M%S').timestamp()),
-    up_sql=up_sql,
-    down_sql=down_sql
-)
+-- DOWN migration
+/*
+Ваш SQL код для отката миграции
+Пример:
+DROP TABLE IF EXISTS example_table;
+*/
 ```
 
 Вам нужно только заполнить SQL-команды в `up_sql` (для применения изменений) и `down_sql` (для отката изменений).
 
 > **&#9888; Важно!**
 >
-> * Никогда не изменяйте существующие миграции после того, как они были закоммичены
+> * Никогда не изменяйте существующие миграции после того, как они были вылиты в репозиторий
 > * Если нужно исправить ошибку в миграции, создайте новую миграцию с исправлением
-> * Временные метки генерируются автоматически и гарантируют уникальность версий
