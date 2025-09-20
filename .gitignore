@@ -1,2 +1,22 @@
+# IDE
 .idea
+
+# Virtual environment
+env
 .env
+
+# Project specific
+version.py
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist
+build
+*.egg-info
+*.egg
+wheels

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo "Updating requirements.txt..."
+echo "# Do not modify this file manually" > requirements.txt
+pip freeze >> requirements.txt
+git add requirements.txt

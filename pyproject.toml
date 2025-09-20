@@ -1,0 +1,7 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"     # Формат версии: 0.0.post5
+local_scheme = "no-local-version"   # Игнорировать локальные изменения
