@@ -1,5 +1,4 @@
 # Do not modify this file manually
-eeTgBot @ file:///C:/Users/holge/Projects/eveechoes_tg_group_bot
 packaging==25.0
 psycopg2-binary==2.9.10
 setuptools-scm==9.2.0
