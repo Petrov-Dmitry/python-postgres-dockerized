@@ -1,1 +1,4 @@
-print("Launching the EveEchoes Telegram Bot")
+import time
+
+while True:
+    time.sleep(1)

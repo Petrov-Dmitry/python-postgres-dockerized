@@ -26,7 +26,13 @@ services:
       context: ./
     working_dir: /app
     command: "./start_bot.sh"
-    # restart: unless-stopped
+    restart: unless-stopped
+    environment:
+      DB_HOST: "eetgbot-db"
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./:/app
     networks:
