@@ -2,12 +2,10 @@
 
 printf %80s |tr " " "="
 printf "\n"
-
 python --version
 pip --version
-
-echo "Update EveEchoes Telegram Bot database version"
-python -m utils.migrations apply
+printf %80s |tr " " "="
+printf "\n"
 
 echo "Launching the EveEchoes Telegram Bot"
-python launcher.py
+python launcher.py -v DEBUG

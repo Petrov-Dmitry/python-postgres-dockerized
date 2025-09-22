@@ -9,6 +9,7 @@ from core.eetgbot import EeTgBot
 from core.log_handler import LogsHandler
 from core.models.logs import LogsModel
 from core.models.settings import SettingsModel
+from utils.migrations import MigrationManager
 
 def setup_logger(log_level, detached_mode):
     """Настройка логирования."""
@@ -92,6 +93,9 @@ def main():
 
     prevent_multiple_instances()
 
+    logging.debug("Update EveEchoes Telegram Bot database version")
+    MigrationManager().apply_to_version(None)
+
     if detached_mode == True:
         python_exec = sys.executable
         detached_process = subprocess.Popen(
@@ -112,7 +116,7 @@ def main():
     else:
         pid = psutil.Process().pid
         SettingsModel().set('pid', pid)
-        logging.debug(f"EveEchoes Telegram Bot in attached mode -console is locked. PID: {pid}")
+        logging.debug(f"EveEchoes Telegram Bot in attached mode - console is locked. PID: {pid}")
 
         run_application()
 

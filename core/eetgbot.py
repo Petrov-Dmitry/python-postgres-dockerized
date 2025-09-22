@@ -14,7 +14,8 @@ class EeTgBot:
 
     def start(self):
         """Запускает приложение"""
-        logger.debug("EveEchoes Telegram Bot has started")
+        logger.info("EveEchoes Telegram Bot has started")
+
         while True:
             time.sleep(5)
 
