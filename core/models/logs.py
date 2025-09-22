@@ -29,11 +29,11 @@ class LogsModel:
         self.settings.set('log_level', str(level))
         logger.info(f"Log level set to {logging.getLevelName(int(level))}")
 
-    def log_message(self, timestamp, level, message):
+    def log_message(self, level, message):
         """Записывает сообщение в таблицу логов."""
         self.db_manager.execute(
-            'INSERT INTO logs (timestamp, level, message) VALUES (%s, %s, %s)',
-            (timestamp, level, message)
+            'INSERT INTO logs (level, message) VALUES (%s, %s)',
+            (level, message)
         )
 
     def get_logs(self):

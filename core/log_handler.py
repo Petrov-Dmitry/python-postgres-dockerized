@@ -13,4 +13,4 @@ class LogsHandler(logging.Handler):
     def emit(self, record):
         level = record.levelno  # Числовой уровень логирования
         message = record.getMessage()
-        self.log_model.log_message(timestamp, level, message)
+        self.log_model.log_message(level, message)
