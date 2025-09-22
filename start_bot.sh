@@ -10,4 +10,4 @@ echo "Update EveEchoes Telegram Bot database version"
 python -m utils.migrations apply
 
 echo "Launching the EveEchoes Telegram Bot"
-python eetgbot.py
+python launcher.py

@@ -15,7 +15,7 @@ class SettingsModel:
         """Получает значение настройки по ключу."""
         result = self.db_manager.execute(
             'SELECT value FROM settings WHERE key = %s',
-            (key),
+            (key,),
             fetchone=True
         )
         return result[0] if result else None
@@ -23,8 +23,8 @@ class SettingsModel:
     def set(self, key, value):
         """Устанавливает значение настройки по ключу."""
         result = self.db_manager.execute(
-            'INSERT OR REPLACE INTO settings (key, value) VALUES (%s, %s)',
-            (key, value)
+            'INSERT INTO settings (key, value) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+            (key, value,)
         )
         logger.debug(f"SettingsModel.set({key}, {value})")
         return result
@@ -33,7 +33,7 @@ class SettingsModel:
         """Удаляет значение настройки по ключу."""
         result = self.db_manager.execute(
             'DELETE FROM settings WHERE key = %s',
-            (key)
+            (key,)
         )
         logger.debug(f"SettingsModel.delete({key})")
         return result

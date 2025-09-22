@@ -1,4 +1,5 @@
 # Do not modify this file manually
 packaging==25.0
+psutil==7.1.0
 psycopg2-binary==2.9.10
 setuptools-scm==9.2.0

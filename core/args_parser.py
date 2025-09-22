@@ -43,8 +43,8 @@ Usage examples:
     parser.add_argument(
         '-v', '--verbosity',
         type=str,
-        choices=LogsModel.get_log_levels().keys(),
-        help=f'Log level: {", ".join(f"{name} = {value}" for name, value in LogsModel.get_log_levels().items())}'
+        choices=LogsModel().get_log_levels().keys(),
+        help=f'Log level: {", ".join(f"{name} = {value}" for name, value in LogsModel().get_log_levels().items())}'
     )
 
     # Информационные аргументы
@@ -86,8 +86,8 @@ def setup_log_level(args: argparse.Namespace) -> int:
     Returns:
         int: Уровень логирования
     """
-    if args.verbosity:
-        level = LogsModel.get_log_levels()[args.verbosity.upper()]
-        LogsModel.set_log_level(level)
+    if args.verbosity is not None:
+        level = LogsModel().get_log_levels()[args.verbosity.upper()]
+        LogsModel().set_log_level(level)
 
-    return LogsModel.get_log_level()
+    return LogsModel().get_log_level()

@@ -33,7 +33,7 @@ class LogsModel:
         """Записывает сообщение в таблицу логов."""
         self.db_manager.execute(
             'INSERT INTO logs (level, message) VALUES (%s, %s)',
-            (level, message)
+            (level, message,)
         )
 
     def get_logs(self):
