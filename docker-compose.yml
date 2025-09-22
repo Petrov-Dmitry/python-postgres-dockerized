@@ -20,6 +20,8 @@ services:
       - eetgbot-network
 
   app:
+    depends_on:
+      - db
     container_name: eetgbot-app
     image: eetgbot
     build:
@@ -35,6 +37,26 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./:/app
+    networks:
+      - eetgbot-network
+
+  # !WARNING! Do NOT add this to production
+  db-ui:
+    depends_on:
+      - db
+    image: adminer
+    container_name: eetgbot-db-ui
+    command: [
+      "php",
+      "-d", "upload_max_filesize = 5G",
+      "-d", "post_max_size = 5G",
+      "-d", "memory_limit = 5G",
+      "-S", "[::]:${ADMINER_PORT}",
+      "-t", "/var/www/html"
+    ]
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT}:${ADMINER_PORT}"
     networks:
       - eetgbot-network
 

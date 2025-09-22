@@ -5,10 +5,11 @@ import argparse
 import logging
 import os
 import re
+
+from core.db_manager import DB_URL, DatabaseManager
 from dataclasses import dataclass
-from typing import List
 from datetime import datetime
-from core.db_manager import DatabaseManager
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class Migration:
 class MigrationManager:
     """Менеджер миграций базы данных PostgreSQL."""
 
-    def __init__(self, db_url: str, migrations_dir: str = "migrations"):
+    def __init__(self, db_url: str = DB_URL, migrations_dir: str = "migrations"):
         self.db_manager = DatabaseManager(db_url)
         self.migrations_dir = migrations_dir
         self._ensure_migrations_table()
