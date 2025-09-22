@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Migration:
     """Класс, представляющий миграцию базы данных."""
-    version: int
+    version: str
+    title: str
     up_sql: str
     down_sql: str
 
@@ -39,7 +40,7 @@ class MigrationManager:
         """Создает таблицу для отслеживания миграций, если она не существует."""
         self.db_manager.execute('''
             CREATE TABLE IF NOT EXISTS migrations (
-                version INTEGER PRIMARY KEY,
+                version CHAR(14) PRIMARY KEY,
                 applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -73,7 +74,7 @@ class MigrationManager:
                     # Сохраняем информацию о примененной миграции
                     cursor.execute(
                         "INSERT INTO migrations (version) VALUES (%s)",
-                        (migration.version,)
+                        (str(migration.version),)
                     )
 
                     conn.commit()
@@ -85,29 +86,35 @@ class MigrationManager:
                 logger.error(f"Failed to apply migration {migration.version}: {e}")
                 raise
 
-    def apply_to_version(self, target_version: int | None, migrations: List[Migration]):
+    def apply_to_version(self, target_version: int | None):
         """Применяет все миграции по порядку до указанной версии."""
-        migrations.sort(key=lambda m: m.version)
-        current_version = self.get_current_version()
-
+        migrations = self.load_migrations_from_dir()
         if not len(migrations):
             print('There are no migrations to apply!')
+            self.show_status()
             return
 
-        if target_version is not None and migrations[-1].version <= target_version:
+        current_version = self.get_current_version()
+        if target_version is None:
+            target_version = migrations[-1].version
+
+        if int(current_version) == int(target_version):
             print('All migrations have already been applied!')
+            self.show_status()
             return
 
         for migration in migrations:
-            if migration.version > current_version:
+            if int(migration.version) > int(current_version):
                 if target_version is None or migration.version <= target_version:
                     self.apply_migration(migration)
+
+        self.show_status()
 
     def rollback_migration(self, migration: Migration):
         """Откатывает миграцию."""
         applied_versions = self.get_applied_versions()
 
-        if migration.version not in applied_versions:
+        if str(migration.version) not in applied_versions:
             logger.info(f"Migration {migration.version} not applied")
             return False
 
@@ -122,7 +129,7 @@ class MigrationManager:
                     # Удаляем запись о миграции
                     cursor.execute(
                         "DELETE FROM migrations WHERE version = %s",
-                        (migration.version,)
+                        (str(migration.version),)
                     )
 
                     conn.commit()
@@ -134,24 +141,30 @@ class MigrationManager:
                 logger.error(f"Failed to roll back migration {migration.version}: {e}")
                 raise
 
-    def rollback_to_version(self, target_version: int | None, migrations: List[Migration]):
+    def rollback_to_version(self, target_version: int | None):
         """Откатывает миграции до указанной версии."""
         applied_versions = self.get_applied_versions()
+        migrations = self.load_migrations_from_dir()
         migrations_dict = {m.version: m for m in migrations}
 
         # Откатываем миграции в обратном порядке
         for version in sorted(applied_versions, reverse=True):
-            if version in migrations_dict:
-                if target_version is None or version > target_version:
-                    self.rollback_migration(migrations_dict[version])
+            if target_version is None:
+                self.rollback_migration(migrations_dict[int(version)])
+                self.show_status()
+                return
+            else:
+                if version in migrations_dict and int(version) > target_version:
+                    self.rollback_migration(migrations_dict[int(version)])
 
-    def generate_migration_template(self, name: str, description: str = "") -> str:
+        self.show_status()
+
+    def generate_migration_template(self, title: str) -> str:
         """
         Генерирует шаблонный файл миграции.
 
         Args:
-            name: Название миграции (будет преобразовано в snake_case)
-            description: Описание миграции (необязательно)
+            title: Название миграции (будет преобразовано в snake_case)
 
         Returns:
             Путь к созданному файлу миграции
@@ -160,7 +173,7 @@ class MigrationManager:
         version = datetime.now().strftime("%Y%m%d%H%M%S")
 
         # Преобразуем имя в snake_case
-        snake_case_name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+        snake_case_name = re.sub(r'(?<!^)(?=[A-Z])', '_', title).lower()
         snake_case_name = re.sub(r'[^a-z0-9_]', '_', snake_case_name)
         snake_case_name = re.sub(r'_+', '_', snake_case_name).strip('_')
 
@@ -170,8 +183,8 @@ class MigrationManager:
 
         # Шаблон миграции
         template = f"""-- Migration: {version}_{snake_case_name}
+-- Title: {title}
 -- Created: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
--- Description: {description or 'No description provided'}
 
 -- UP migration
 /*
@@ -216,10 +229,11 @@ DROP TABLE IF EXISTS example_table;
         for filename in os.listdir(self.migrations_dir):
             if filename.endswith('.sql'):
                 # Парсим версию из имени файла (первые цифры до первого _)
-                match = re.match(r'^(\d+)', filename)
+                match = re.match(r'^(\d+)_(.*?)\.sql', filename)
                 if match:
                     try:
                         version = int(match.group(1))
+                        title = match.group(2)
                         filepath = os.path.join(self.migrations_dir, filename)
 
                         with open(filepath, 'r', encoding='utf-8') as f:
@@ -229,7 +243,7 @@ DROP TABLE IF EXISTS example_table;
                         up_sql = self._extract_sql_section(content, 'UP migration')
                         down_sql = self._extract_sql_section(content, 'DOWN migration')
 
-                        migrations.append(Migration(version, up_sql, down_sql))
+                        migrations.append(Migration(version, title, up_sql, down_sql))
 
                     except (ValueError, Exception) as e:
                         logger.warning(f"Failed to parse migration file {filename}: {e}")
@@ -260,33 +274,27 @@ DROP TABLE IF EXISTS example_table;
         applied_versions = self.get_applied_versions()
         migration_files = self.load_migrations_from_dir()
 
-        print("\nMigration Status:")
+        print("Migration Status:")
         print("-" * 80)
         print(f"{'Status':<10} {'Version':<20} {'Title':<50}")
         print("-" * 80)
 
-        for filename in migration_files:
-            timestamp = filename.split('_')[0]
-            title = ' '.join(filename[15:-3].split('_')).capitalize()
-            version = int(datetime.strptime(timestamp, '%Y%m%d%H%M%S').timestamp())
-
-            status = "✓" if version in applied_versions else " "
-            print(f"{status:<10} {timestamp:<20} {title:<50}")
+        for migration in migration_files:
+            status = "✓" if str(migration.version) in applied_versions else " "
+            print(f"{status:<10} {migration.version:<20} {migration.title:<50}")
 
         print("-" * 80)
 
 if __name__ == "__main__":
     db_manager = DatabaseManager()
     migrations_manager = MigrationManager(db_manager.db_url)
-    migrations = migrations_manager.load_migrations_from_dir()
 
     parser = argparse.ArgumentParser(description='Database migration management tool')
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
     # Команда create
     create_parser = subparsers.add_parser('create', help='Create a new migration')
-    create_parser.add_argument('name', help='Migration name')
-    create_parser.add_argument('description', help='Migration description')
+    create_parser.add_argument('title', help='Migration title')
 
     # Команда status
     subparsers.add_parser('status', help='Show migration status')
@@ -302,7 +310,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == 'create':
-        filepath = migrations_manager.generate_migration_template(args.name, args.description)
+        filepath = migrations_manager.generate_migration_template(args.title)
         print(f"\nCreated new migration: {os.path.basename(filepath)}")
         print(f"Full path: {filepath}")
         print("\nYou can now edit the file and add your SQL migration commands.")
@@ -314,14 +322,14 @@ if __name__ == "__main__":
         target_version = None
         if args.to:
             target_version = int(datetime.strptime(args.to, '%Y%m%d%H%M%S').timestamp())
-        migrations_manager.apply_to_version(target_version, migrations)
+        migrations_manager.apply_to_version(target_version)
         migrations_manager.get_current_version()
 
     elif args.command == 'rollback':
         target_version = None
         if args.to:
             target_version = int(datetime.strptime(args.to, '%Y%m%d%H%M%S').timestamp())
-        migrations_manager.rollback_to_version(target_version, migrations)
+        migrations_manager.rollback_to_version(target_version)
         migrations_manager.get_current_version()
 
     else:

@@ -11,7 +11,6 @@ class LogsHandler(logging.Handler):
         self.log_model = log_model
 
     def emit(self, record):
-        timestamp = datetime.now().timestamp()  # Float timestamp with milliseconds
         level = record.levelno  # Числовой уровень логирования
         message = record.getMessage()
         self.log_model.log_message(timestamp, level, message)
